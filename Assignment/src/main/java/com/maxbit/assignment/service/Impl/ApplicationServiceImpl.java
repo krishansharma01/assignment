@@ -1,5 +1,6 @@
 package com.maxbit.assignment.service.Impl;
 
+import java.io.ByteArrayInputStream;
 import java.util.List;
 import java.util.Optional;
 
@@ -48,33 +49,25 @@ public class ApplicationServiceImpl implements ApplicationService {
 	@Override
 	public ApplicationResponse<UserApplication> saveApplication(UserApplication newApplication) {
 		Optional<UserApplication> applicationOptional = repository.findByEmail(newApplication.getEmail());
-
-		List<Project> projects = newApplication.getProjects();
-		for (Project project : projects) {
+		for (Project project : newApplication.getProjects()) {
 			project.setApplication(newApplication);
 		}
-
 		if (applicationOptional.isPresent()) {
 			repository.delete(applicationOptional.get());
-			UserApplication application = applicationOptional.get();
-			application.setGithubUserName(newApplication.getGithubUserName());
-			application.setName(newApplication.getName());
-			application.setProjects(newApplication.getProjects());
-
-			repository.save(application);
+			repository.save(newApplication);
 
 		} else {
 			repository.save(newApplication);
 		}
+
 		return new ApplicationResponse<>(HttpStatus.OK, "Successful! ");
 	}
 
 	@Override
-	public ApplicationResponse<UserApplication> export() {
+	public ByteArrayInputStream export() {
 		ApplicationResponse<List<UserApplication>> response = getAllApplications();
 		List<UserApplication> applications = response.getData();
-		pdfExport.generatePdfReport(applications);
-		return null;
+		return pdfExport.generatePdfReport(applications);
 	}
 
 }

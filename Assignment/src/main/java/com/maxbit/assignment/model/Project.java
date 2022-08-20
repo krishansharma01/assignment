@@ -55,4 +55,19 @@ public class Project {
 	@JoinColumn(name = "application_id", nullable = false)
 	@JsonBackReference
 	private UserApplication application;
+
+	public Project(@NonNull String projectName, @NonNull CapacityType type, @NonNull Double durationInMonths,
+			@NonNull Integer startYear, @NonNull String role, @NonNull Integer teamSize, String gitHubLink,
+			String liveUrl, UserApplication application) {
+		super();
+		this.projectName = projectName;
+		this.type = type;
+		this.durationInMonths = durationInMonths;
+		this.startYear = startYear;
+		this.role = role;
+		this.teamSize = teamSize;
+		this.gitHubLink = gitHubLink;
+		this.liveUrl = liveUrl;
+		this.application = application;
+	}
 }

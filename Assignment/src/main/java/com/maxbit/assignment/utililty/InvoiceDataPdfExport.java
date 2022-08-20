@@ -1,9 +1,9 @@
 package com.maxbit.assignment.utililty;
 
 import java.awt.Color;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -11,10 +11,12 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import com.lowagie.text.Chunk;
 import com.lowagie.text.Document;
 import com.lowagie.text.DocumentException;
 import com.lowagie.text.Element;
 import com.lowagie.text.Font;
+import com.lowagie.text.PageSize;
 import com.lowagie.text.Paragraph;
 import com.lowagie.text.Phrase;
 import com.lowagie.text.pdf.PdfPCell;
@@ -46,16 +48,19 @@ public class InvoiceDataPdfExport {
 	@Value("${table.columnNames}")
 	private List<String> columnNames;
 
+	@Value("${project.columnNames}")
+	private List<String> projectColumnNames;
+
 	private static Font COURIER = new Font(Font.COURIER, 14, Font.BOLD);
 	private static Font COURIER_SMALL = new Font(Font.COURIER, 12, Font.BOLD);
 	private static Font COURIER_SMALL_FOOTER = new Font(Font.COURIER, 10, Font.BOLD);
 
-	public void generatePdfReport(List<UserApplication> applications) {
+	public ByteArrayInputStream generatePdfReport(List<UserApplication> applications) {
 
-		Document document = new Document();
-
+		Document document = new Document(PageSize.A1);
+		ByteArrayOutputStream out = new ByteArrayOutputStream();
 		try {
-			PdfWriter.getInstance(document, new FileOutputStream(getPdfNameWithDate()));
+			PdfWriter.getInstance(document, out);
 			document.open();
 			addDocTitle(document);
 			createTable(document, noOfColumns, applications);
@@ -63,11 +68,10 @@ public class InvoiceDataPdfExport {
 			document.close();
 			System.out.println("------------------Your PDF Report is ready!-------------------------");
 
-		} catch (FileNotFoundException | DocumentException e) {
-			// TODO Auto-generated catch block
+		} catch (DocumentException e) {
 			e.printStackTrace();
 		}
-
+		return new ByteArrayInputStream(out.toByteArray());
 	}
 
 	private void addDocTitle(Document document) throws DocumentException {
@@ -90,11 +94,13 @@ public class InvoiceDataPdfExport {
 		document.add(paragraph);
 
 		PdfPTable table = new PdfPTable(noOfColumns);
-
+		table.setWidths(new int[] { 50, 50, 50, 200 });
 		for (int i = 0; i < noOfColumns; i++) {
 			PdfPCell cell = new PdfPCell(new Phrase(columnNames.get(i)));
 			cell.setHorizontalAlignment(Element.ALIGN_CENTER);
 			cell.setBackgroundColor(Color.CYAN);
+			cell.setPaddingLeft(0);
+			cell.setIndent(0);
 			table.addCell(cell);
 		}
 
@@ -116,22 +122,37 @@ public class InvoiceDataPdfExport {
 			table.addCell(application.getGithubUserName());
 			List<Project> projects = application.getProjects();
 			PdfPCell cell = new PdfPCell();
-			PdfPTable nestedTable = new PdfPTable(2);
-			PdfPCell cell1 = new PdfPCell(new Phrase("projectName"));
-			PdfPCell cell2 = new PdfPCell(new Phrase("projectName"));
-			nestedTable.addCell(cell1);
-			nestedTable.addCell(cell2);
+			PdfPTable nestedTable = new PdfPTable(8);
+			createProjectsTable(nestedTable);
+			nestedTable.setHeaderRows(1);
+			int count = 1;
 			for (Project project : projects) {
-
+				nestedTable.addCell("No. " + count++);
 				nestedTable.addCell(project.getProjectName());
 				nestedTable.addCell(project.getRole());
-//				nestedTable.addCell(project.getProjectName());
-				cell.addElement(nestedTable);
+				nestedTable.addCell(project.getStartYear().toString());
+				nestedTable.addCell(project.getTeamSize().toString());
+				nestedTable.addCell(project.getType().toString());
+				Phrase gitLink = new Phrase();
+				gitLink.add(new Chunk("Github Link").setAnchor(project.getGitHubLink()));
+				nestedTable.addCell(gitLink);
+				Phrase liveUrl = new Phrase();
+				liveUrl.add(new Chunk("Live URL").setAnchor(project.getLiveUrl()));
+				nestedTable.addCell(liveUrl);
 
 			}
+			cell.addElement(nestedTable);
 
 			table.addCell(cell);
 		}
+	}
+
+	private void createProjectsTable(PdfPTable nestedTable) {
+		for (String colName : projectColumnNames) {
+			nestedTable.setWidthPercentage(100);
+			nestedTable.addCell(new PdfPCell(new Phrase(colName)));
+		}
+
 	}
 
 	private void addFooter(Document document) throws DocumentException {

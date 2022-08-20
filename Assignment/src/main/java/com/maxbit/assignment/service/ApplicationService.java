@@ -1,5 +1,6 @@
 package com.maxbit.assignment.service;
 
+import java.io.ByteArrayInputStream;
 import java.util.List;
 
 import com.maxbit.assignment.exception.ApplicationNotFoundException;
@@ -14,6 +15,6 @@ public interface ApplicationService {
 
 	ApplicationResponse<UserApplication> saveApplication(UserApplication application);
 
-	ApplicationResponse<UserApplication> export();
+	ByteArrayInputStream export();
 
 }
