@@ -12,6 +12,6 @@ run command "mvnw install" command
 
 run command "docker-compose up" command 
 
-open localhost:8080 in your browser
+open http://localhost:9696/ in your browser
 
 
