@@ -1,4 +1,4 @@
-package com.maxbit.assignment.model;
+package com.maxbit.assignment.entity;
 
 public enum CapacityType {
 

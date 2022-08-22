@@ -4,6 +4,8 @@ import java.awt.Color;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.IOException;
+import java.net.URL;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -16,14 +18,15 @@ import com.lowagie.text.Document;
 import com.lowagie.text.DocumentException;
 import com.lowagie.text.Element;
 import com.lowagie.text.Font;
+import com.lowagie.text.Image;
 import com.lowagie.text.PageSize;
 import com.lowagie.text.Paragraph;
 import com.lowagie.text.Phrase;
 import com.lowagie.text.pdf.PdfPCell;
 import com.lowagie.text.pdf.PdfPTable;
 import com.lowagie.text.pdf.PdfWriter;
-import com.maxbit.assignment.model.Project;
-import com.maxbit.assignment.model.UserApplication;
+import com.maxbit.assignment.entity.Project;
+import com.maxbit.assignment.entity.UserApplication;
 
 @Component
 public class InvoiceDataPdfExport {
@@ -74,6 +77,43 @@ public class InvoiceDataPdfExport {
 		return new ByteArrayInputStream(out.toByteArray());
 	}
 
+	public ByteArrayInputStream generateApplicantPdfReport(UserApplication applications) {
+		Document document = new Document(PageSize.A1);
+		ByteArrayOutputStream out = new ByteArrayOutputStream();
+		try {
+			PdfWriter.getInstance(document, out);
+			document.open();
+			addDocTitle(document);
+			createReport(document, applications);
+			addFooter(document);
+			document.close();
+			System.out.println("------------------Your PDF Report is ready!-------------------------");
+
+		} catch (DocumentException | IOException e) {
+			e.printStackTrace();
+		}
+		return new ByteArrayInputStream(out.toByteArray());
+	}
+
+	private void createReport(Document document, UserApplication applications)
+			throws DocumentException, IOException {
+		Image image = Image.getInstance(new URL("https://avatars.githubusercontent.com/"+applications.getGithubUserName()));
+		image.setAbsolutePosition(50, 2200);
+		image.scaleAbsolute(100, 100);
+		document.add(image);
+		Paragraph p1 = new Paragraph();
+		leaveEmptyLine(p1, 10);
+		document.add(p1);
+		Font font = new Font(Font.COURIER, 16, Font.BOLD);
+		document.add(new Paragraph("Name : " + applications.getName(),font));
+		document.add(new Paragraph("Email : " + applications.getEmail(),font));
+		document.add(new Paragraph("Github : " + applications.getGithubUserName(),font));
+
+		document.add(p1);
+		PdfPTable projectTable = getProjectTable(applications.getProjects());
+		document.add(projectTable);
+	}
+
 	private void addDocTitle(Document document) throws DocumentException {
 		String localDateString = LocalDateTime.now().format(DateTimeFormatter.ofPattern(localDateFormat));
 		Paragraph p1 = new Paragraph();
@@ -122,29 +162,46 @@ public class InvoiceDataPdfExport {
 			table.addCell(application.getGithubUserName());
 			List<Project> projects = application.getProjects();
 			PdfPCell cell = new PdfPCell();
-			PdfPTable nestedTable = new PdfPTable(8);
-			createProjectsTable(nestedTable);
-			nestedTable.setHeaderRows(1);
-			int count = 1;
-			for (Project project : projects) {
-				nestedTable.addCell("No. " + count++);
-				nestedTable.addCell(project.getProjectName());
-				nestedTable.addCell(project.getRole());
-				nestedTable.addCell(project.getStartYear().toString());
-				nestedTable.addCell(project.getTeamSize().toString());
-				nestedTable.addCell(project.getType().toString());
-				Phrase gitLink = new Phrase();
-				gitLink.add(new Chunk("Github Link").setAnchor(project.getGitHubLink()));
-				nestedTable.addCell(gitLink);
-				Phrase liveUrl = new Phrase();
-				liveUrl.add(new Chunk("Live URL").setAnchor(project.getLiveUrl()));
-				nestedTable.addCell(liveUrl);
-
-			}
+			PdfPTable nestedTable = getProjectTable(projects);
 			cell.addElement(nestedTable);
 
 			table.addCell(cell);
 		}
+	}
+
+	private PdfPTable getProjectTable(List<Project> projects) {
+		PdfPTable nestedTable = new PdfPTable(8);
+		createProjectsTable(nestedTable);
+		nestedTable.setHeaderRows(1);
+		int count = 1;
+		for (Project project : projects) {
+			nestedTable.addCell("No. " + count++);
+			nestedTable.addCell(project.getProjectName());
+			nestedTable.addCell(project.getRole());
+			nestedTable.addCell(project.getStartYear().toString());
+			nestedTable.addCell(project.getTeamSize().toString());
+			nestedTable.addCell(project.getType().toString());
+
+			Phrase gitLink = new Phrase("-");
+			String gitHubLink = project.getGitHubLink();
+			if (gitHubLink == null || "".equals(gitHubLink)) {
+				Chunk link = new Chunk("Github Link").setAnchor(gitHubLink);
+				gitLink.add(link);
+			}
+
+			nestedTable.addCell(gitLink);
+			
+			Phrase url = new Phrase("-");
+			String liveUrl = project.getGitHubLink();
+			if (liveUrl == null || "".equals(gitHubLink)) {
+				Chunk link = new Chunk("Live URL").setAnchor(liveUrl);
+				url.add(link);
+			}
+
+			nestedTable.addCell(url);
+
+		}
+		return nestedTable;
 	}
 
 	private void createProjectsTable(PdfPTable nestedTable) {
@@ -167,7 +224,7 @@ public class InvoiceDataPdfExport {
 
 	private static void leaveEmptyLine(Paragraph paragraph, int number) {
 		for (int i = 0; i < number; i++) {
-			paragraph.add(new Paragraph(" "));
+			paragraph.add(new Paragraph(""));
 		}
 	}
 

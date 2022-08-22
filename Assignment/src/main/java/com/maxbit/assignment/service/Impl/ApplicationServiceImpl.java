@@ -1,6 +1,7 @@
 package com.maxbit.assignment.service.Impl;
 
 import java.io.ByteArrayInputStream;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -8,12 +9,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
+import com.maxbit.assignment.Application;
+import com.maxbit.assignment.entity.Project;
+import com.maxbit.assignment.entity.UserApplication;
 import com.maxbit.assignment.exception.ApplicationNotFoundException;
 import com.maxbit.assignment.model.ApplicationResponse;
-import com.maxbit.assignment.model.Project;
-import com.maxbit.assignment.model.UserApplication;
+import com.maxbit.assignment.model.ProjectModel;
+import com.maxbit.assignment.model.UserApplicationModel;
 import com.maxbit.assignment.repository.ApplicationsRepository;
-import com.maxbit.assignment.repository.ProjectRepository;
 import com.maxbit.assignment.service.ApplicationService;
 import com.maxbit.assignment.utililty.InvoiceDataPdfExport;
 
@@ -22,9 +25,6 @@ public class ApplicationServiceImpl implements ApplicationService {
 
 	@Autowired
 	private ApplicationsRepository repository;
-
-	@Autowired
-	private ProjectRepository projectRepository;
 
 	@Autowired
 	private InvoiceDataPdfExport pdfExport;
@@ -47,20 +47,31 @@ public class ApplicationServiceImpl implements ApplicationService {
 	}
 
 	@Override
-	public ApplicationResponse<UserApplication> saveApplication(UserApplication newApplication) {
+	public ApplicationResponse<UserApplication> saveApplication(UserApplicationModel newApplication) {
 		Optional<UserApplication> applicationOptional = repository.findByEmail(newApplication.getEmail());
-		for (Project project : newApplication.getProjects()) {
-			project.setApplication(newApplication);
-		}
+		
+		UserApplication application = mapToEntity(newApplication);
 		if (applicationOptional.isPresent()) {
 			repository.delete(applicationOptional.get());
-			repository.save(newApplication);
+			repository.save(application);
 
 		} else {
-			repository.save(newApplication);
+			repository.save(application);
 		}
 
 		return new ApplicationResponse<>(HttpStatus.OK, "Successful! ");
+	}
+
+	private UserApplication mapToEntity(UserApplicationModel newApplication) {
+		UserApplication application = new UserApplication(newApplication.getEmail(),newApplication.getName(),newApplication.getGithubUserName());
+		List<Project> projects = new ArrayList<>();
+		for (ProjectModel project : newApplication.getProjects()) {
+			projects.add( new Project(project.getProjectName(),project.getType(),
+					project.getDurationInMonths(),project.getStartYear(),project.getRole()
+					,project.getTeamSize(),project.getGitHubLink(),project.getLiveUrl(),application));
+		}
+		application.setProjects(projects);
+		return application;
 	}
 
 	@Override
@@ -70,4 +81,10 @@ public class ApplicationServiceImpl implements ApplicationService {
 		return pdfExport.generatePdfReport(applications);
 	}
 
+	@Override
+	public ByteArrayInputStream exportByEmail(String email) {
+		ApplicationResponse<UserApplication> response = getApplicationByEmail(email);
+		UserApplication application = response.getData();
+		return pdfExport.generateApplicantPdfReport(application);
+	}
 }

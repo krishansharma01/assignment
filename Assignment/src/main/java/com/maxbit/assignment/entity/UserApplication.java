@@ -1,4 +1,4 @@
-package com.maxbit.assignment.model;
+package com.maxbit.assignment.entity;
 
 import java.util.List;
 
@@ -10,6 +10,7 @@ import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.OneToMany;
 
+import org.springframework.data.annotation.Transient;
 import org.springframework.lang.NonNull;
 
 import com.fasterxml.jackson.annotation.JsonManagedReference;
@@ -26,11 +27,16 @@ public class UserApplication {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	@Transient
 	private Long applicationId;
 
+	@NonNull
 	private String email;
 
+	@NonNull
 	private String name;
+	
+	@NonNull
 	private String githubUserName;
 
 	@NonNull
@@ -45,5 +51,11 @@ public class UserApplication {
 		this.githubUserName = githubUserName;
 		this.projects = projects;
 	}
-
+	
+	public UserApplication(String email, String name, String githubUserName) {
+		super();
+		this.email = email;
+		this.name = name;
+		this.githubUserName = githubUserName;
+	}
 }
